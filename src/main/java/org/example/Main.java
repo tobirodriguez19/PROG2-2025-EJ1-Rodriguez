@@ -5,10 +5,12 @@ import org.example.dto.CuentaCorriente;
 import org.example.dto.IGestionSaldo;
 import org.example.services.ServicioCuenta;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class Main {
 
@@ -19,6 +21,7 @@ public class Main {
         ServicioCuenta servicio = ServicioCuenta.getInstancia();
         Random random = new Random();
 
+        // Crear cuentas
         for (int i = 0; i < totalCuentas; i++) {
             double saldoInicial = random.nextDouble() * 1000;
 
@@ -31,9 +34,11 @@ public class Main {
         }
 
         ExecutorService executor = Executors.newFixedThreadPool(10);
+        List<Future<?>> futures = new ArrayList<>();
 
+        // Enviar operaciones al executor
         for (int i = 0; i < totalOperaciones; i++) {
-            executor.execute(() -> {
+            Future<?> future = executor.submit(() -> {
                 int cuentaId = random.nextInt(totalCuentas);
                 double monto = 1 + random.nextInt(100);
                 boolean agregar = random.nextBoolean();
@@ -44,11 +49,19 @@ public class Main {
                     servicio.quitarSaldo(cuentaId, monto);
                 }
             });
+            futures.add(future);
+        }
+
+        // Esperar que todas las tareas finalicen
+        for (Future<?> future : futures) {
+            try {
+                future.get();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
         executor.shutdown();
-        while (!executor.isTerminated()) {
-        }
 
         System.out.println("Resultados Finales:");
         List<IGestionSaldo> cuentas = servicio.obtenerCuentas();
